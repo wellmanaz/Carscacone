@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mesa Trails</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="board" aria-label="Game board"></canvas>
+
+  <section id="title" class="screen" hidden>
+    <div class="title-card">
+      <h1>Mesa Trails</h1>
+      <p class="tagline">Map the desert one tile at a time.</p>
+      <ul id="menu" class="menu"></ul>
+      <p class="note" id="pad-note"></p>
+      <p class="note small">On Xbox: if the controller drives a pointer instead of this menu, try holding the Menu button (three lines) to hand it to the game. The pointer works too: point and press A.</p>
+      <button type="button" class="link-button" id="fullscreen">Full screen</button>
+    </div>
+  </section>
+
+  <section id="setup" class="screen" hidden>
+    <div class="title-card">
+      <h2>Who's playing?</h2>
+      <ul id="seats" class="menu seats"></ul>
+      <p class="note small"><span class="glyph a">A</span> change name &nbsp; <span class="glyph stick">◀ ▶</span> human or AI level &nbsp; <span class="glyph b">B</span> back</p>
+    </div>
+  </section>
+
+  <section id="keyboard" class="screen" hidden>
+    <div class="title-card kb-card">
+      <h2 id="kb-title"></h2>
+      <div id="kb-field" class="kb-field"></div>
+      <div id="kb-keys" class="kb-keys"></div>
+      <p class="note small"><span class="glyph a">A</span> type &nbsp; <span class="glyph x">X</span> delete &nbsp; <span class="glyph y">Y</span> space &nbsp; <span class="glyph shoulder">LB</span> shift &nbsp; <span class="glyph shoulder">RT</span> done &nbsp; <span class="glyph b">B</span> cancel</p>
+    </div>
+  </section>
+
+  <section id="join" class="screen" hidden>
+    <div class="title-card">
+      <h2 id="join-prompt"></h2>
+      <p class="note">Each player presses A on their own controller, in turn.</p>
+      <ul id="join-list" class="join-list"></ul>
+      <p class="note small"><span class="glyph b">B</span> back</p>
+    </div>
+  </section>
+
+  <section id="hud" hidden>
+    <div id="turn" class="turn-chip"></div>
+    <aside id="side">
+      <div class="panel">
+        <div class="panel-label">Your tile</div>
+        <canvas id="preview" width="200" height="200"></canvas>
+        <div class="rotate-row">
+          <button type="button" data-action="lb" class="hud-button"><span class="glyph shoulder">LB</span> ⟲</button>
+          <button type="button" data-action="rb" class="hud-button">⟳ <span class="glyph shoulder">RB</span></button>
+        </div>
+        <div id="deck-count" class="deck-count"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Scores</div>
+        <ul id="scores" class="scores"></ul>
+      </div>
+    </aside>
+    <div id="hints" class="hints"></div>
+  </section>
+
+  <section id="over" class="screen" hidden>
+    <div class="title-card">
+      <h2 id="winner"></h2>
+      <ol id="ranking" class="ranking"></ol>
+      <div id="final-list" class="final-list"></div>
+      <p class="note"><button type="button" class="hud-button" data-action="a"><span class="glyph a">A</span> New game</button></p>
+    </div>
+  </section>
+
+  <section id="help" class="screen" hidden>
+    <div class="title-card help-card">
+      <h2>How to play</h2>
+      <p>Take turns placing the tile shown on the right. Every edge must match the tiles it touches: trail to trail, mesa to mesa, scrub to scrub.</p>
+      <p>After placing, you may stand one of your 7 scouts on a trail, mesa, oasis or patch of scrub on that tile, as long as nobody already holds that connected feature.</p>
+      <ul class="rules">
+        <li><b>Trail</b> finished at both ends: 1 point per tile.</li>
+        <li><b>Mesa</b> closed all round: 2 per tile, +2 per spring.</li>
+        <li><b>Oasis</b> with all 8 neighbours: 9 points.</li>
+        <li><b>Scrub</b> scores at the end: 3 per finished mesa it touches.</li>
+        <li>Most scouts on a feature wins it; ties both score. Scouts come home when it scores.</li>
+        <li>At the end, unfinished trails score 1 per tile, mesas 1 per tile and spring, oases 1 per tile around them.</li>
+        <li>AI players take their own turns. Easy makes plenty of mistakes; Hard plays to beat the leader.</li>
+      </ul>
+      <table class="controls">
+        <tr><td><span class="glyph stick">D-pad / stick</span></td><td>Move</td></tr>
+        <tr><td><span class="glyph a">A</span></td><td>Place tile / confirm</td></tr>
+        <tr><td><span class="glyph x">X</span> <span class="glyph shoulder">RB</span> <span class="glyph shoulder">LB</span></td><td>Rotate</td></tr>
+        <tr><td><span class="glyph y">Y</span></td><td>Jump to the next spot the tile fits</td></tr>
+        <tr><td><span class="glyph shoulder">LT</span> <span class="glyph shoulder">RT</span></td><td>Zoom out / in</td></tr>
+        <tr><td><span class="glyph b">B</span></td><td>No scout this turn</td></tr>
+        <tr><td><span class="glyph shoulder">View</span></td><td>This help</td></tr>
+      </table>
+      <p class="note small">Press <span class="glyph b">B</span> or <span class="glyph a">A</span> to close.</p>
+    </div>
+  </section>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="js/tiles.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "mesa-trails",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mesa Trails: a hot-seat tile-laying board game for the Xbox browser, played with controllers.",
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes http-server -c-1 -p 8080 ."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
