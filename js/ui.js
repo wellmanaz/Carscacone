@@ -3,6 +3,7 @@
   'use strict';
 
   const E = window.MesaEngine;
+  const AI = window.MesaAI;
   const App = window.MesaApp;
   const { Renderer } = window.MesaRender;
   const { Input } = window.MesaInput;
@@ -22,6 +23,7 @@
   const el = {
     board: $('board'), title: $('title'), menu: $('menu'), padNote: $('pad-note'), fullscreen: $('fullscreen'),
     join: $('join'), joinPrompt: $('join-prompt'), joinList: $('join-list'),
+    setup: $('setup'), seats: $('seats'), keyboard: $('keyboard'), kbTitle: $('kb-title'), kbField: $('kb-field'), kbKeys: $('kb-keys'),
     hud: $('hud'), turn: $('turn'), preview: $('preview'), deck: $('deck-count'), scores: $('scores'), hints: $('hints'), side: $('side'),
     over: $('over'), winner: $('winner'), ranking: $('ranking'), finalList: $('final-list'),
     help: $('help'), banner: $('banner'), toasts: $('toasts'),
@@ -37,6 +39,18 @@
     if (pad != null && action === 'b') lastPadB = Date.now();
     app.handle(action, pad);
   });
+
+  // A real keyboard types straight into the name box (arrows still move on the on-screen keys).
+  window.addEventListener('keydown', (e) => {
+    if (!app.editor || e.ctrlKey || e.metaKey || e.altKey) return;
+    let used = true;
+    if (e.key === 'Enter') app.closeEditor(true);
+    else if (e.key === 'Escape') app.closeEditor(false);
+    else if (e.key === 'Backspace') app.editorPress('del');
+    else if (e.key && e.key.length === 1) app.editorType(e.key);
+    else used = false;
+    if (used) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
 
   // Edge on Xbox treats B as the browser's Back button unless game controls are on.
   // Keep an extra history entry and turn Back into the game's B instead of leaving.
@@ -68,10 +82,17 @@
     else app.pointCell(cell.x, cell.y);
   });
   document.addEventListener('click', (e) => {
+    if (!fromPointer()) return;
+    const key = e.target.closest('[data-kb-row]');
+    if (key) { app.editorPoint(Number(key.getAttribute('data-kb-row')), Number(key.getAttribute('data-kb-col'))); return; }
+    const seatType = e.target.closest('[data-seat-type]');
+    if (seatType) { const i = Number(seatType.getAttribute('data-seat-type')); app.setupFocus = i; app.cycleSeat(i, 1); return; }
+    const seat = e.target.closest('[data-seat]');
+    if (seat) { app.setupFocus = Number(seat.getAttribute('data-seat')); app.handle('a', null); return; }
     const btn = e.target.closest('[data-action]');
-    if (btn && fromPointer()) app.handle(btn.getAttribute('data-action'), null);
+    if (btn) app.handle(btn.getAttribute('data-action'), null);
     const row = e.target.closest('[data-menu]');
-    if (row && fromPointer()) {
+    if (row) {
       app.menu.focus = Number(row.getAttribute('data-menu'));
       app.handle('a', null);
     }
@@ -101,6 +122,9 @@
   const button = (action, text, keys) =>
     '<button type="button" class="hud-button" data-action="' + action + '">' + (keys || [action]).map(glyph).join(' ') + ' ' + text + '</button>';
   const dot = (color) => '<span class="dot" style="background:' + color + '"></span>';
+  const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const SEAT_LABELS = { human: 'Human', easy: 'AI · Easy', medium: 'AI · Medium', hard: 'AI · Hard' };
+  const aiTag = (p) => (p.ai ? ' <span class="ai-tag">AI ' + AI.LEVEL_NAMES[p.ai] + '</span>' : '');
 
   function menuHtml() {
     const items = app.menuItems();
@@ -108,7 +132,7 @@
       players: ['Players', app.menu.players],
       length: ['Game length', app.menu.quick ? 'Quick (' + App.QUICK_DECK + ' tiles)' : 'Full (71 tiles)'],
       pads: ['Controllers', app.menu.ownPads ? 'One each' : 'Pass one around'],
-      start: ['Start game', null],
+      start: ['New game', null],
       continue: ['Continue saved game', null],
     };
     return items.map((item, i) => {
@@ -118,8 +142,36 @@
     }).join('');
   }
 
+  function seatsHtml() {
+    const rows = [];
+    for (let i = 0; i < app.menu.players; i++) {
+      const focus = i === app.setupFocus ? 'focus' : '';
+      rows.push('<li class="seat ' + focus + '" data-seat="' + i + '">' +
+        '<span class="seat-name">' + dot(E.PLAYER_COLORS[i]) + '<span>' + esc(app.seatName(i)) + '</span></span>' +
+        '<span class="value" data-seat-type="' + i + '">' + SEAT_LABELS[app.setup.types[i]] + '</span></li>');
+    }
+    rows.push('<li class="action ' + (app.setupFocus === app.menu.players ? 'focus' : '') + '" data-seat="' + app.menu.players + '">Start game</li>');
+    return rows.join('');
+  }
+
+  function keyboardHtml() {
+    const ed = app.editor;
+    const upper = app.editorUpper();
+    const current = app.editorKey();
+    const labels = { del: '⌫ Delete', space: 'Space', shift: ed.shift ? '⇧ Shift on' : '⇧ Shift', done: 'Done' };
+    return App.KEYBOARD.map((row, r) => row.map((k) => {
+      const label = labels[k.value] || (/^[a-z]$/.test(k.value) && upper ? k.value.toUpperCase() : k.value);
+      const cls = 'kb-key' + (k === current ? ' focus' : '') + (k.value.length > 1 ? ' wide' : '') + (k.value === 'done' ? ' done' : '');
+      return '<button type="button" class="' + cls + '" style="grid-column: span ' + k.span + '" data-kb-row="' + r + '" data-kb-col="' + k.col + '">' + esc(label) + '</button>';
+    }).join('')).join('');
+  }
+
   function hintsHtml() {
     const p = app.player();
+    if (app.isAITurn()) {
+      return '<span class="hint-label" style="border-color:' + p.color + '">' + esc(p.name) + ' (AI ' + AI.LEVEL_NAMES[p.ai] + ') is playing…</span>' +
+        button('rt', 'Zoom', ['lt', 'rt']) + button('view', 'Help');
+    }
     if (app.phase === 'scout') {
       const opt = app.currentOption();
       const label = opt ? 'Scout on the ' + App.FEATURE_NAMES[opt.type] : 'No scout';
@@ -138,6 +190,7 @@
     const game = app.game;
     const sig = JSON.stringify([
       scr, app.menu, app.hasSave(), app.joinIndex, app.bindings, app.help, input.connected,
+      app.setup, app.setupFocus, app.editor, app.isAITurn(), !!app.aiPlan,
       app.phase, app.tile, app.rot, app.optionIndex, app.options.length,
       game && game.players.map((p) => [p.score, p.scouts]), game && game.current, game && game.deck.length,
     ]);
@@ -145,6 +198,8 @@
       lastKey = sig;
       el.title.hidden = scr !== 'title';
       el.join.hidden = scr !== 'join';
+      el.setup.hidden = scr !== 'setup';
+      el.keyboard.hidden = !app.editor;
       el.hud.hidden = scr !== 'play';
       el.over.hidden = scr !== 'over';
       el.help.hidden = !app.help;
@@ -154,20 +209,31 @@
           ? input.connected + (input.connected === 1 ? ' controller' : ' controllers') + ' ready. ' + glyph('a') + ' to choose, D-pad to move.'
           : 'Press ' + glyph('a') + ' on a controller to wake it up (or use the arrow keys and Enter).';
       }
+      if (scr === 'setup') el.seats.innerHTML = seatsHtml();
+      if (app.editor) {
+        const ed = app.editor;
+        const fallback = E.PLAYER_NAMES[ed.seat];
+        el.kbTitle.innerHTML = dot(E.PLAYER_COLORS[ed.seat]) + ' Name for player ' + (ed.seat + 1);
+        el.kbField.innerHTML = ed.text
+          ? esc(ed.text) + '<span class="caret"></span>'
+          : '<span class="caret"></span><span class="placeholder">' + esc(fallback) + '</span>';
+        el.kbField.style.borderColor = E.PLAYER_COLORS[ed.seat];
+        el.kbKeys.innerHTML = keyboardHtml();
+      }
       if (scr === 'join') {
-        const i = app.joinIndex;
-        el.joinPrompt.innerHTML = dot(E.PLAYER_COLORS[i]) + ' ' + E.PLAYER_NAMES[i] + ', press ' + glyph('a') + ' on your controller';
+        const i = app.joinSeats[app.joinIndex];
+        el.joinPrompt.innerHTML = dot(E.PLAYER_COLORS[i]) + ' ' + esc(app.seatName(i)) + ', press ' + glyph('a') + ' on your controller';
         el.joinPrompt.style.color = E.PLAYER_COLORS[i];
-        el.joinList.innerHTML = app.bindings.map((b, k) => '<li>' + dot(E.PLAYER_COLORS[k]) + E.PLAYER_NAMES[k] + ': ' +
-          (k < i ? (b == null ? 'keyboard / pointer' : 'controller ' + (b + 1)) : '…') + '</li>').join('');
+        el.joinList.innerHTML = app.joinSeats.map((k, n) => '<li>' + dot(E.PLAYER_COLORS[k]) + esc(app.seatName(k)) + ': ' +
+          (n < app.joinIndex ? (app.bindings[k] == null ? 'keyboard / pointer' : 'controller ' + (app.bindings[k] + 1)) : '…') + '</li>').join('');
       }
       if (scr === 'play') {
         const p = app.player();
-        el.turn.innerHTML = dot(p.color) + '<span>' + p.name + "'s turn</span>";
+        el.turn.innerHTML = dot(p.color) + '<span>' + esc(p.name) + "'s turn</span>" + aiTag(p);
         el.turn.style.borderColor = p.color;
         el.deck.textContent = game.deck.length + ' tiles left after this one';
         el.scores.innerHTML = game.players.map((pl, k) => '<li class="' + (k === game.current ? 'current' : '') + '" style="color:' + pl.color + '">' +
-          dot(pl.color) + '<span><span class="name">' + pl.name + '</span><br><span class="scouts">' + pl.scouts + ' scouts left</span></span>' +
+          dot(pl.color) + '<span><span class="name">' + esc(pl.name) + '</span>' + aiTag(pl) + '<br><span class="scouts">' + pl.scouts + ' scouts left</span></span>' +
           '<span class="pts">' + pl.score + '</span></li>').join('');
         el.hints.innerHTML = hintsHtml();
         renderer.drawPreview(el.preview, app.tile, app.rot, 240);
@@ -177,9 +243,9 @@
         const top = rank.filter((r) => r.score === rank[0].score);
         el.winner.textContent = top.length > 1 ? 'A tie at ' + rank[0].score + '!' : rank[0].name + ' wins!';
         el.winner.style.color = top.length > 1 ? '' : rank[0].color;
-        el.ranking.innerHTML = rank.map((r) => '<li>' + dot(r.color) + r.name + '<span class="pts">' + r.score + '</span></li>').join('');
+        el.ranking.innerHTML = rank.map((r) => '<li>' + dot(r.color) + esc(r.name) + aiTag(r) + '<span class="pts">' + r.score + '</span></li>').join('');
         el.finalList.innerHTML = app.finalEvents.filter((ev) => ev.points > 0)
-          .map((ev) => '<div>' + app.describe(ev) + '</div>').join('') || '<div>No end-of-game points.</div>';
+          .map((ev) => '<div>' + esc(app.describe(ev)) + '</div>').join('') || '<div>No end-of-game points.</div>';
       }
       layout();
     }
@@ -188,7 +254,7 @@
     const toastKey = app.toasts.map((t) => t.text + t.until).join('|');
     if (el.toasts.dataset.key !== toastKey) {
       el.toasts.dataset.key = toastKey;
-      el.toasts.innerHTML = app.toasts.map((t) => '<div class="toast" style="border-color:' + (t.color || 'rgba(255,230,200,0.16)') + '">' + t.text + '</div>').join('');
+      el.toasts.innerHTML = app.toasts.map((t) => '<div class="toast" style="border-color:' + (t.color || 'rgba(255,230,200,0.16)') + '">' + esc(t.text) + '</div>').join('');
     }
     const bannerKey = app.banner ? app.banner.text + app.banner.until : '';
     if (el.banner.dataset.key !== bannerKey) {

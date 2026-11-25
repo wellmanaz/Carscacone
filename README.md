@@ -28,7 +28,15 @@ The title menu has four rows (D-pad up/down to pick a row, left/right or A to ch
 - **Controllers:**
   - *Pass one around:* any controller plays whoever's turn it is. Works with a single controller, or several if everyone just takes turns.
   - *One each:* each player presses A on their own controller before the game. During play only the current player's controller moves the tile; the others are ignored until their turn.
-- **Start game.** A game in progress is saved after every turn; **Continue saved game** appears if you leave mid-game.
+- **New game** opens the player setup. A game in progress is saved after every turn; **Continue saved game** appears if you leave mid-game.
+
+The player setup screen has one row per player, then **Start game**:
+
+- **A** on a player's row opens an on-screen keyboard to change their name (up to 12 letters, numbers, spaces, apostrophes, hyphens or dots). D-pad to move, **A** to type, **X** delete, **Y** space, **LB** shift, **RT** or the Done key to finish, **B** to cancel. A plugged-in keyboard types straight into the box. The first letter of each word is a capital unless Shift is on. Leave it blank to go back to the default name.
+- **Left/right** on a player's row switches them between **Human**, **AI · Easy**, **AI · Medium** and **AI · Hard**. Computer players take their own turns with a short pause between steps so you can follow them; controllers do nothing during their turn except zoom.
+- Names and player types are remembered for next time. With *One each* controllers, only the human players join.
+
+The computer players look at every spot and rotation for their tile and every scout they could place, and estimate what each player's features will be worth by the end. *Easy* plays a random spot about half the time and ignores the other players. *Medium* plays for itself with some noise and keeps half an eye on the others. *Hard* plays to beat whoever is strongest, without noise. In test games Hard beat Medium 18 times out of 20, and Medium beat Easy 20 out of 20.
 
 ## Controls
 
@@ -76,11 +84,12 @@ Most points wins.
 | `index.html`, `styles.css` | The page and its TV-sized layout |
 | `js/tiles.js` | The 24 tile designs and how many of each are in the deck |
 | `js/engine.js` | Rules: matching edges, connected features, scoring. No browser code. |
-| `js/app.js` | Game flow: menu, controller hand-out, turns, saving |
+| `js/app.js` | Game flow: menu, player setup and name keyboard, controller hand-out, turns, computer turns, saving |
+| `js/ai.js` | Computer players (easy, medium, hard) |
 | `js/render.js` | Canvas drawing of tiles, scouts and the board |
 | `js/input.js` | Gamepad polling (standard layout), keyboard |
 | `js/ui.js` | Connects it all to the page |
-| `test/` | `node --test` tests for the rules, the turn flow and the drawing code |
+| `test/` | `node --test` tests for the rules, the turn flow, the computer players and the drawing code |
 
 Run the tests with Node 18 or newer:
 
@@ -95,6 +104,7 @@ To serve it locally (for example to open it from another device on your network)
 Proof of concept. What has been checked and what hasn't:
 
 - Rules, turn flow and save/continue are covered by tests, including 25 random full games.
-- The page was run end to end in a simulated browser (jsdom with a real canvas), with keyboard play and with two simulated standard-layout controllers, including the one-controller-each mode.
+- The page was run end to end in a simulated browser (jsdom with a real canvas), with keyboard play and with two simulated standard-layout controllers, including the one-controller-each mode. Player setup, the name keyboard (typed, clicked and controller-driven) and a computer turn were also run there.
+- Computer moves take under 50 ms each on a PC in Node; how long they take on the console is unknown.
 - **Not yet tried on a real Xbox.** Unknowns: whether Edge on Xbox hands controller input to the page without switching to game controls, whether it reports more than one controller to a web page, how Back (B) behaves in browsing mode (the game catches Back and treats it as B, and saves every turn in case the page is left), and how it performs on the console.
 - Not tried in Safari or Firefox.

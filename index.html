@@ -20,6 +20,23 @@
     </div>
   </section>
 
+  <section id="setup" class="screen" hidden>
+    <div class="title-card">
+      <h2>Who's playing?</h2>
+      <ul id="seats" class="menu seats"></ul>
+      <p class="note small"><span class="glyph a">A</span> change name &nbsp; <span class="glyph stick">◀ ▶</span> human or AI level &nbsp; <span class="glyph b">B</span> back</p>
+    </div>
+  </section>
+
+  <section id="keyboard" class="screen" hidden>
+    <div class="title-card kb-card">
+      <h2 id="kb-title"></h2>
+      <div id="kb-field" class="kb-field"></div>
+      <div id="kb-keys" class="kb-keys"></div>
+      <p class="note small"><span class="glyph a">A</span> type &nbsp; <span class="glyph x">X</span> delete &nbsp; <span class="glyph y">Y</span> space &nbsp; <span class="glyph shoulder">LB</span> shift &nbsp; <span class="glyph shoulder">RT</span> done &nbsp; <span class="glyph b">B</span> cancel</p>
+    </div>
+  </section>
+
   <section id="join" class="screen" hidden>
     <div class="title-card">
       <h2 id="join-prompt"></h2>
@@ -70,6 +87,7 @@
         <li><b>Scrub</b> scores at the end: 3 per finished mesa it touches.</li>
         <li>Most scouts on a feature wins it; ties both score. Scouts come home when it scores.</li>
         <li>At the end, unfinished trails score 1 per tile, mesas 1 per tile and spring, oases 1 per tile around them.</li>
+        <li>AI players take their own turns. Easy makes plenty of mistakes; Hard plays to beat the leader.</li>
       </ul>
       <table class="controls">
         <tr><td><span class="glyph stick">D-pad / stick</span></td><td>Move</td></tr>
@@ -89,6 +107,7 @@
 
   <script src="js/tiles.js"></script>
   <script src="js/engine.js"></script>
+  <script src="js/ai.js"></script>
   <script src="js/app.js"></script>
   <script src="js/render.js"></script>
   <script src="js/input.js"></script>

@@ -101,6 +101,7 @@
       state.players.push({
         name: p.name || PLAYER_NAMES[i],
         color: p.color || PLAYER_COLORS[i],
+        ai: p.ai || null, // null for a person, or 'easy' / 'medium' / 'hard'
         score: 0,
         scouts: SCOUTS_PER_PLAYER,
       });
@@ -352,7 +353,7 @@
 
   function ranking(state) {
     return state.players
-      .map((p, i) => ({ index: i, name: p.name, color: p.color, score: p.score }))
+      .map((p, i) => ({ index: i, name: p.name, color: p.color, score: p.score, ai: p.ai || null }))
       .sort((a, b) => b.score - a.score);
   }
 

@@ -399,7 +399,7 @@
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, this.w, this.h);
 
-    if (!app.game || app.screen === 'title' || app.screen === 'join') {
+    if (!app.game || app.screen === 'title' || app.screen === 'setup' || app.screen === 'join') {
       const demo = this.demoBoard();
       const size = this.tileSize(0.8);
       this.cam.x = Math.sin(time / 9000) * 2;

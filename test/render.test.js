@@ -44,6 +44,8 @@ test('the board draws on every screen', () => {
   const app = new App({ seed: 5, now: () => (t += 16) });
   renderer.draw(app, t);
   app.handle('a');
+  renderer.draw(app, t); // player setup screen
+  app.handle('a');
   let turns = 0;
   while (app.screen === 'play' && turns < 80) {
     renderer.draw(app, t);
